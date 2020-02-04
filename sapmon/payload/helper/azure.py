@@ -137,8 +137,8 @@ class AzureKeyVault:
                                                                   sp=os.environ["sp"],
                                                                   password=os.environ["password"],
                                                                   tenant=os.environ["tenant"])
-      self.token = tokenResponse.token
-      self.kv_client = SecretClient(vault_url=self.uri, credential=self.token)
+      credential = DefaultAzureCredential()
+      self.kv_client = SecretClient(vault_url=self.uri, credential=credential)
 
    # Set a secret in the KeyVault
    def setSecret(self,
