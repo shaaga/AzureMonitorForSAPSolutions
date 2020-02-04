@@ -157,7 +157,7 @@ def prepareUpdate(args: str) -> None:
        updateprofile = updateProfileFactoryObj.createUpdateProfile(args.toVersion)
        updateprofile.update(ctx, args.fromVersion)
     except Exception as e:
-        sys.stderr.write("Could not fulfill the update requirements for %s" % args.toVersion)
+        sys.stderr.write("Could not fulfill the update requirements for %s %s" % (args.toVersion, e))
 
 # Ensures the required directory structure exists
 def ensureDirectoryStructure() -> None:
