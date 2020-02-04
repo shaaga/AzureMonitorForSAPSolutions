@@ -1,5 +1,7 @@
+
 # Azure modules
 from azure.common.credentials import BasicTokenAuthentication
+from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.storage import StorageManagementClient
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -97,18 +99,20 @@ class AzureInstanceMetadataService:
 
    # Get an authentication token via MSI auth
    @staticmethod
-   def getAuthTokenMSI(tracer: logging.Logger,
+   def getAuthTokenSP(tracer: logging.Logger,
                    resource: str,
-                   msiClientId: Optional[str] = None) -> str:
+                   sp: str,
+                    password: str,
+                      tenant) -> ServicePrincipalCredentials:
       tracer.info("getting auth token for resource=%s%s" % (
-      resource, ", msiClientId=%s" % msiClientId if msiClientId else ""))
+      resource, ", service principal=%s" % sp if sp else ""))
       authToken = None
       try:
-          authToken = MSIAuthentication(object_id=msiClientId)
+          credentials = ServicePrincipalCredentials(client_id=sp,secret=password,tenant=tenant)
       except Exception as e:
           tracer.critical("could not get auth token (%s)" % e)
           sys.exit(ERROR_GETTING_AUTH_TOKEN)
-      return authToken.token
+      return credentials
 
 ###############################################################################
 
@@ -128,7 +132,12 @@ class AzureKeyVault:
       self.tracer.info("initializing KeyVault %s" % kvName)
       self.kvName = kvName
       self.uri = "https://%s.vault.azure.net" % kvName
-      self.token = DefaultAzureCredential(clientId = msiClientId)
+      tokenResponse = AzureInstanceMetadataService.getAuthTokenSP(self.tracer,
+                                                                  resource="https://management.azure.com/",
+                                                                  sp=os.environ["sp"],
+                                                                  password=os.environ["password"],
+                                                                  tenant=os.environ["tenant"])
+      self.token = tokenResponse.token
       self.kv_client = SecretClient(vault_url=self.uri, credential = self.token)
 
    # Set a secret in the KeyVault
@@ -270,10 +279,12 @@ class AzureStorageQueue():
         self.tracer.info("initializing Storage Queue instance")
         self.accountName = STORAGE_ACCOUNT_NAMING_CONVENTION % sapmonId
         self.name = queueName
-        tokenResponse = AzureInstanceMetadataService.getAuthTokenMSI(self.tracer,
+        tokenResponse = AzureInstanceMetadataService.getAuthTokenSP(self.tracer,
                                                                   resource = "https://management.azure.com/",
-                                                                  msiClientId = msiClientID)
-        self.token["access_token"] = tokenResponse
+                                                                  sp = os.environ["sp"],
+                                                                  password=os.environ["password"],
+                                                                  tenant=os.environ["tenant"])
+        self.token["access_token"] = tokenResponse.token
         self.subscriptionId = subscriptionId
         self.resourceGroup = resourceGroup
 
