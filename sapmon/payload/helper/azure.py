@@ -133,12 +133,12 @@ class AzureKeyVault:
       self.kvName = kvName
       self.uri = "https://%s.vault.azure.net" % kvName
       tokenResponse = AzureInstanceMetadataService.getAuthTokenSP(self.tracer,
-                                                                  resource="https://management.azure.com/",
+                                                                  resource="https://vault.azure.net/",
                                                                   sp=os.environ["sp"],
                                                                   password=os.environ["password"],
                                                                   tenant=os.environ["tenant"])
       self.token = tokenResponse.token
-      self.kv_client = SecretClient(vault_url=self.uri, credential = self.token)
+      self.kv_client = SecretClient(vault_url=self.uri, credential=self.token)
 
    # Set a secret in the KeyVault
    def setSecret(self,
