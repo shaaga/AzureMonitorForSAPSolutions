@@ -12,6 +12,7 @@ import json
 import logging
 import requests
 import sys
+import os
 from typing import Callable, Dict, Optional
 
 # Payload modules
@@ -55,6 +56,24 @@ class AzureInstanceMetadataService:
       except Exception as e:
          tracer.error("could not obtain instance metadata (%s)" % e)
       return computeInstance
+
+   # static method to use ACI tags
+   @staticmethod
+   def getAzureMetadata(tracer: logging.Logger,
+                          operation: str) -> Dict[str, str]:
+       tracer.info("getting compute instance")
+       computeInstance = None
+       try:
+           computeInstance = dict()
+           computeInstance = {"SapMonMsiClientId": os.environ["SapMonMsiClientId"],
+                              "subscriptionId": os.environ["subscriptionId"],
+                              "resourceGroupName": os.environ["resourceGroupName"],
+                              "tags": "SapMonId:%s ;SapMonMsiClientId: %s" %(os.environ["SapMonId"], os.environ["SapMonMsiClientId"])
+                              }
+           tracer.debug("computeInstance=%s" % computeInstance)
+       except Exception as e:
+           tracer.error("could not obtain instance metadata (%s)" % e)
+       return computeInstance
 
    # Get an authentication token via IMDS
    @staticmethod

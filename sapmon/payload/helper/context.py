@@ -32,7 +32,7 @@ class Context(object):
       self.appTracer.info("initializing context")
 
       # Retrieve sapmonId via IMDS
-      self.vmInstance = AzureInstanceMetadataService.getComputeInstance(self.appTracer,
+      self.vmInstance = AzureInstanceMetadataService.getAzureMetadata(self.appTracer,
                                                                         operation)
       self.vmTags = dict(
          map(lambda s : s.split(':'),
