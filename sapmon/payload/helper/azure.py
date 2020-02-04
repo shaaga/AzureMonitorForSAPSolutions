@@ -4,6 +4,8 @@ from azure.mgmt.storage import StorageManagementClient
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
+from msrestazure.azure_active_directory import MSIAuthentication
+
 # Python modules
 import base64
 import hashlib
@@ -92,6 +94,21 @@ class AzureInstanceMetadataService:
          tracer.critical("could not get auth token (%s)" % e)
          sys.exit(ERROR_GETTING_AUTH_TOKEN)
       return authToken
+
+   # Get an authentication token via MSI auth
+   @staticmethod
+   def getAuthTokenMSI(tracer: logging.Logger,
+                   resource: str,
+                   msiClientId: Optional[str] = None) -> str:
+      tracer.info("getting auth token for resource=%s%s" % (
+      resource, ", msiClientId=%s" % msiClientId if msiClientId else ""))
+      authToken = None
+      try:
+          authToken = MSIAuthentication(object_id=msiClientId)
+      except Exception as e:
+          tracer.critical("could not get auth token (%s)" % e)
+          sys.exit(ERROR_GETTING_AUTH_TOKEN)
+      return authToken.token
 
 ###############################################################################
 
@@ -253,7 +270,7 @@ class AzureStorageQueue():
         self.tracer.info("initializing Storage Queue instance")
         self.accountName = STORAGE_ACCOUNT_NAMING_CONVENTION % sapmonId
         self.name = queueName
-        tokenResponse = AzureInstanceMetadataService.getAuthToken(self.tracer,
+        tokenResponse = AzureInstanceMetadataService.getAuthTokenMSI(self.tracer,
                                                                   resource = "https://management.azure.com/",
                                                                   msiClientId = msiClientID)
         self.token["access_token"] = tokenResponse
