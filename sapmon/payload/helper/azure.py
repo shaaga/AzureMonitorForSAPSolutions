@@ -72,7 +72,7 @@ class AzureInstanceMetadataService:
            computeInstance = {"SapMonMsiClientId": os.environ["SapMonMsiClientId"],
                               "subscriptionId": os.environ["subscriptionId"],
                               "resourceGroupName": os.environ["resourceGroupName"],
-                              "tags": "SapMonId:%s ;SapMonMsiClientId: %s" %(os.environ["SapMonId"], os.environ["SapMonMsiClientId"])
+                              "tags": "SapMonId:%s;SapMonMsiClientId:%s" %(os.environ["SapMonId"], os.environ["SapMonMsiClientId"])
                               }
            tracer.debug("computeInstance=%s" % computeInstance)
        except Exception as e:
@@ -284,7 +284,7 @@ class AzureStorageQueue():
                                                                   sp = os.environ["sp"],
                                                                   password=os.environ["password"],
                                                                   tenant=os.environ["tenant"])
-        self.token["access_token"] = tokenResponse.token
+        self.token = tokenResponse.token
         self.subscriptionId = subscriptionId
         self.resourceGroup = resourceGroup
 
