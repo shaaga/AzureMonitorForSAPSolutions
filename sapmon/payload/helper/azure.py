@@ -108,7 +108,7 @@ class AzureInstanceMetadataService:
       resource, ", service principal=%s" % sp if sp else ""))
       authToken = None
       try:
-          credentials = ServicePrincipalCredentials(client_id=sp,secret=password,tenant=tenant)
+          credentials = ServicePrincipalCredentials(client_id=sp,secret=password,tenant=tenant,resource=resource)
       except Exception as e:
           tracer.critical("could not get auth token (%s)" % e)
           sys.exit(ERROR_GETTING_AUTH_TOKEN)
