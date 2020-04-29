@@ -73,8 +73,9 @@ class ProviderInstance(ABC):
       self.checks = []
       for checkOptions in checks:
          try:
-            self.tracer.info("[%s] instantiating check for provider type %s" % (self.fullName,
-                                                                                self.providerType))
+            self.tracer.info("[%s] instantiating check for provider type %s check: %s" % (self.fullName,
+                                                                                self.providerType,
+                                                                                checkOptions.name))
             self.tracer.debug("[%s] checkOptions=%s" % (self.fullName,
                                                         checkOptions))
             newCheck = ProviderFactory.makeProviderCheck(self.providerType,
@@ -234,7 +235,7 @@ class ProviderCheck(ABC):
    # Method that gets called when this check is executed
    # Returns a JSON-formatted string that can be ingested into Log Analytics
    def run(self) -> str:
-      self.tracer.info("[%s] executing all actions of check" % self.fullName)
+      self.tracer.info("[%s] executing all actions" % self.fullName)
       self.tracer.debug("[%s] actions=%s" % (self.fullName,
                                              self.actions))
       for action in self.actions:

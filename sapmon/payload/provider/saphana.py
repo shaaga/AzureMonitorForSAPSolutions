@@ -277,6 +277,7 @@ class saphanaProviderCheck(ProviderCheck):
 
       # Convert temporary dictionary into JSON string
       try:
+         self.tracer.info("[%s] Number of result rows to ingest into Log analytics: %d" % (self.fullName, len(logData)))
          resultJsonString = json.dumps(logData, sort_keys=True, indent=4, cls=JsonEncoder)
          self.tracer.debug("[%s] resultJson=%s" % (self.fullName,
                                                    str(resultJsonString)))
