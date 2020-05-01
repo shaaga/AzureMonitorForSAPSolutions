@@ -10,6 +10,7 @@ from const import *
 from helper.azure import *
 from helper.tools import *
 from provider.base import ProviderInstance, ProviderCheck
+from retry.api import retry_call
 from typing import Dict, List
 
 # SAP HANA modules
@@ -310,10 +311,10 @@ class saphanaProviderCheck(ProviderCheck):
       return True
 
    # Connect to HANA and run the check-specific SQL statement
-   def _actionExecuteSql(self,
+   def actionExecuteSql(self,
                     sql: str,
                     isTimeSeries: bool = False,
-                    initialTimespanSecs: int = 60) -> bool:
+                    initialTimespanSecs: int = 60):
       self.tracer.info("[%s] connecting to HANA and executing SQL" % self.fullName)
 
       # Marking which column will be used for TimeGenerated
@@ -322,14 +323,14 @@ class saphanaProviderCheck(ProviderCheck):
       # Find and connect to HANA server
       (connection, cursor, host) = self._getHanaConnection()
       if not connection:
-         return False
+         raise Exception("Failed _getHanaConnection")
 
       # Prepare SQL statement
       preparedSql = self._prepareSql(sql,
                                      isTimeSeries,
                                      initialTimespanSecs)
       if not preparedSql:
-         return False
+         raise Exception ("Failed _prepareSql")
 
       # Execute SQL statement
       try:
@@ -342,7 +343,7 @@ class saphanaProviderCheck(ProviderCheck):
          self.tracer.error("[%s] could not execute SQL %s (%s)" % (self.fullName,
                                                                    preparedSql,
                                                                    e))
-         return False
+         raise e
 
       self.lastResult = (colIndex, resultRows)
       self.tracer.debug("[%s] lastResult.colIndex=%s" % (self.fullName,
@@ -352,7 +353,7 @@ class saphanaProviderCheck(ProviderCheck):
 
       # Update internal state
       if not self.updateState():
-         return False
+         raise Exception("Failed updateState")
 
       # Disconnect from HANA server to avoid memory leaks
       try:
@@ -361,10 +362,25 @@ class saphanaProviderCheck(ProviderCheck):
       except Exception as e:
          self.tracer.error("[%s] could not close connection to HANA instance (%s)" % (self.fullName,
                                                                                       e))
-         return False
+         raise Exception("Failed connection.close")
 
       self.tracer.info("[%s] successfully ran SQL for check" % self.fullName)
-      return True
+
+   def _actionExecuteSql(self,
+                         sql: str,
+                         isTimeSeries: bool = False,
+                         initialTimespanSecs: int = 60) -> bool:
+      try:
+         retry_call(
+            self.actionExecuteSql,
+            fargs=[sql, isTimeSeries, initialTimespanSecs],
+            tries=3,
+            delay=1,
+            backoff=2,
+            logger=self.tracer)
+         return True
+      except Exception:
+         return False
 
    # Parse result of the query against M_LANDSCAPE_HOST_CONFIGURATION and store it internally
    def _actionParseHostConfig(self) -> bool:
