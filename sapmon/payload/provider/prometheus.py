@@ -62,7 +62,17 @@ class prometheusProviderInstance(ProviderInstance):
 
     def validate(self) -> bool:
         self.tracer.info("fetching data from %s to validate connection" % self.metricsUrl)
-        return bool(self.fetch_metrics())
+        try:
+            metricsData = self.fetch_metrics()
+            if metricsData is None:
+                raise Exception("Did not receive data from endpoint")
+            # Try to look at the first generator value, if it is empty, use None as an indicator
+            if next(text_string_to_metric_families(metricsData), None) is None:
+                raise Exception("Not able to parse data from endpoint")
+            return True
+        except Exception as err:
+            self.tracer.info("Failed to validate %s (%s)" % (self.metricsUrl, err))
+        return False
 
     def fetch_metrics(self) -> str:
         try:
