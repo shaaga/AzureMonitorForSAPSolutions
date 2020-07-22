@@ -91,7 +91,7 @@
                     "type": "ExecuteSql",
                     "parameters": {
                         "isTimeSeries": true,
-                        "initialTimespanSecs": 31536000,
+                        "initialTimespanSecs": 86400,
                         "sql": "SELECT sa.EVENT_TIME AS _SERVER_LOCALTIME, ADD_SECONDS(sa.EVENT_TIME, MAP(hi.VALUE, null, 0, hi.VALUE*(-1))) AS _TIMESERIES_UTC, sa.* FROM SYS.M_SYSTEM_AVAILABILITY sa LEFT OUTER JOIN SYS.M_HOST_INFORMATION hi ON (sa.HOST = hi.HOST AND UPPER(hi.KEY) = 'TIMEZONE_OFFSET') WHERE ADD_SECONDS(sa.EVENT_TIME, MAP(hi.VALUE, null, 0, hi.VALUE*(-1))) > {lastRunServerUtc} ORDER BY sa.EVENT_TIME ASC"
                     }
                 }
