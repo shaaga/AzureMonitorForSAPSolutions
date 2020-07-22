@@ -251,7 +251,7 @@ class saphanaProviderCheck(ProviderCheck):
          if not lastRunServer:
             self.tracer.info("[%s] time series query has never been run, applying initalTimespanSecs=%d" % \
                (self.fullName, initialTimespanSecs))
-            lastRunServerUtc = "LOCALTOUTC(ADD_SECONDS(NOW(), -%d))" % initialTimespanSecs
+            lastRunServerUtc = "ADD_SECONDS(NOW(), MAP(i.VALUE, null, 0, i.VALUE*(-1)) - %d)" % initialTimespanSecs
          else:
             if not isinstance(lastRunServer, datetime):
                self.tracer.error("[%s] lastRunServer=%s could not been de-serialized into datetime object" % (self.fullName,
