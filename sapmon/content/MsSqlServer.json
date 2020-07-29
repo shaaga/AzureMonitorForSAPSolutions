@@ -145,7 +145,7 @@
 				{
 					"type": "ExecuteSql",
 					"parameters": {
-						"sql": "select 'blocked' as type,spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status,hostname,program_name,hostprocess,sql_handle from sys.sysprocesses where (blocked != 0 and blocked != spid) union all select 'BLOCKER',spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status, hostname,program_name,hostprocess,sql_handle from sys.sysprocesses  where (spid in (select distinct blocked from sys.sysprocesses where blocked != 0 and blocked != spid) and blocked != spid)"
+						"sql": "--select 'blocked' as type,spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status,hostname,program_name,hostprocess,sql_handle from sys.sysprocesses where (blocked != 0 and blocked != spid) union all select 'BLOCKER',spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status, hostname,program_name,hostprocess,sql_handle from sys.sysprocesses  where (spid in (select distinct blocked from sys.sysprocesses where blocked != 0 and blocked != spid) and blocked != spid)"
 					}
 				}
 			]
@@ -263,6 +263,21 @@
 					"type": "ExecuteSql",
 					"parameters": {
 						"sql": "SET QUOTED_IDENTIFIER ON;declare @tfile sysname;select @tfile = cast((target_data) as XML).value(N'/EventFileTarget[1]/File[1]/@name',N'sysname') from sys.dm_xe_session_targets st inner join sys.dm_xe_sessions sess ON (sess.[address] = st.[event_session_address]) WHERE sess.[name] = N'AlwaysOn_health' and st.target_name = N'event_file';select @tfile = stuff(@tfile,patindex('%AlwaysOn_health%',@tfile),999,N'AlwaysOn_health*');WITH cte_HADR AS (SELECT object_name,CONVERT(XML, event_data) AS data FROM sys.fn_xe_file_target_read_file(@tfile, null, null, null) WHERE object_name = N'error_reported') SELECT data.value('(/event/@timestamp)[1]','datetime') AS [timestamp],@@SERVERNAME as server_name,replace(replace(data.value('(/event/data[@name=''message''])[1]','varchar(max)'),N'The availability group database ',''), N' because the mirroring session or availability group failed over due to role synchronization. This is an informational message only. No user action is required.','') AS [message] FROM cte_HADR WHERE data.value('(/event/data[@name=''error_number''])[1]','int') = 1480 ORDER BY [timestamp] DESC;"
+					}
+				}
+			]
+		},
+		{
+			"name": "BckBackups",
+			"description": "Backups",
+			"customLog": "MSSQL_BckBackups",
+			"frequencySecs": 60,
+			"includeInCustomerAnalytics": true,
+			"actions": [
+				{
+					"type": "ExecuteSql",
+					"parameters": {
+						"sql": "select t.database_name as DBName,case t.type when N'D' then N'Full' when N'F' then N'File' when N'G' then N'Filegroup' when N'I' then N'Differential' when N'L' then N'Log' end as BackupType, convert(varchar(20),t.backup_finish_date,120) as BackupFinishDate, h.logical_device_name as DeviceName, j.name as MediaSet, t.backup_set_id as BackupSetID, t.name as BackupSet, t.description as Description, convert(decimal(12,2),((t.backup_size/1024)/1024)) as BackupSize, convert(char(8),(t.backup_finish_date - t.backup_start_date),108) as BackupDuration from msdb..backupset t, msdb..backupmediafamily h, msdb..backupmediaset j where t.media_set_id = h.media_set_id and t.media_set_id = j.media_set_id order by t.backup_finish_date desc;"
 					}
 				}
 			]
