@@ -100,7 +100,7 @@
 				{
 					"type": "ExecuteSql",
 					"parameters": {
-						"sql": "SELECT TOP 100 OBJECT_NAME(p.object_id) as [Table], SUM (p.reserved_page_count) as [Reserved (Pages)], convert(numeric(8,2),(SUM (p.reserved_page_count) * 8.00) / 1024 /1024) as [Reserved (GB)], SUM (p.used_page_count) as [Used (Pages)], convert(numeric(8,2),(SUM (p.used_page_count) * 8.00) / 1024 /1024) as [Used (GB)], SUM ( CASE WHEN (p.index_id < 2) THEN (p.in_row_data_page_count + p.lob_used_page_count + p.row_overflow_used_page_count) ELSE p.lob_used_page_count + p.row_overflow_used_page_count END ) as [Data Pages], SUM (p.lob_used_page_count) as [BLOB Size (Pages)], convert(numeric(8,2),(SUM (p.lob_used_page_count) * 8.00) / 1024 /1024) as [BLOB Size (GB)], SUM ( CASE WHEN (p.index_id < 2) THEN row_count ELSE 0 END ) as [Row Count] FROM sys.dm_db_partition_stats as p group by object_id order by SUM (p.reserved_page_count) desc "
+						"sql": "SELECT TOP 12 OBJECT_NAME(p.object_id) as [Table], SUM (p.reserved_page_count) as [Reserved (Pages)], convert(numeric(8,2),(SUM (p.reserved_page_count) * 8.00) / 1024 /1024) as [Reserved (GB)], SUM (p.used_page_count) as [Used (Pages)], convert(numeric(8,2),(SUM (p.used_page_count) * 8.00) / 1024 /1024) as [Used (GB)], SUM ( CASE WHEN (p.index_id < 2) THEN (p.in_row_data_page_count + p.lob_used_page_count + p.row_overflow_used_page_count) ELSE p.lob_used_page_count + p.row_overflow_used_page_count END ) as [Data Pages], SUM (p.lob_used_page_count) as [BLOB Size (Pages)], convert(numeric(8,2),(SUM (p.lob_used_page_count) * 8.00) / 1024 /1024) as [BLOB Size (GB)], SUM ( CASE WHEN (p.index_id < 2) THEN row_count ELSE 0 END ) as [Row Count] FROM sys.dm_db_partition_stats as p group by object_id order by SUM (p.reserved_page_count) desc "
 					}
 				}
 			]
@@ -131,21 +131,6 @@
 					"type": "ExecuteSql",
 					"parameters": {
 						"sql": ";WITH Waits AS (SELECT wait_type, 100.0 * wait_time_ms / SUM (wait_time_ms) OVER() AS Percentage, ROW_NUMBER() OVER(ORDER BY wait_time_ms DESC) AS RowNum FROM sys.dm_os_wait_stats WHERE wait_type NOT IN ( 'CLR_SEMAPHORE', 'LAZYWRITER_SLEEP', 'RESOURCE_QUEUE', 'SLEEP_TASK', 'SLEEP_SYSTEMTASK', 'SQLTRACE_BUFFER_FLUSH', 'WAITFOR', 'LOGMGR_QUEUE', 'CHECKPOINT_QUEUE', 'REQUEST_FOR_DEADLOCK_SEARCH', 'XE_TIMER_EVENT', 'BROKER_TO_FLUSH','SP_SERVER_DIAGNOSTICS_SLEEP', 'BROKER_TASK_STOP', 'CLR_MANUAL_EVENT', 'CLR_AUTO_EVENT', 'DISPATCHER_QUEUE_SEMAPHORE','HADR_FILESTREAM_IOMGR_IOCOMPLETION', 'FT_IFTS_SCHEDULER_IDLE_WAIT', 'XE_DISPATCHER_WAIT', 'XE_DISPATCHER_JOIN', 'BROKER_EVENTHANDLER', 'TRACEWRITE', 'FT_IFTSHC_MUTEX', 'SQLTRACE_INCREMENTAL_FLUSH_SLEEP', 'BROKER_RECEIVE_WAITFOR', 'ONDEMAND_TASK_QUEUE', 'DBMIRROR_EVENTS_QUEUE','DIRTY_PAGE_POLL', 'DBMIRRORING_CMD', 'BROKER_TRANSMITTER', 'SQLTRACE_WAIT_ENTRIES', 'SLEEP_BPOOL_FLUSH', 'SQLTRACE_LOCK') and wait_type not like 'PREEMPTIVE%' and wait_type not like 'FT%' ) SELECT top 12 W1.wait_type AS WaitType, CAST (W1.Percentage AS DECIMAL(19, 2)) AS Percentage FROM Waits AS W1 INNER JOIN Waits AS W2 ON W2.RowNum <= W1.RowNum GROUP BY W1.RowNum, W1.wait_type, W1.Percentage"
-					}
-				}
-			]
-		},
-		{
-			"name": "BlockingProcesses",
-			"description": "SQL Server blocking processes",
-			"customLog": "MSSQL_BlockingProcesses",
-			"frequencySecs": 60,
-			"includeInCustomerAnalytics": true,
-			"actions": [
-				{
-					"type": "ExecuteSql",
-					"parameters": {
-						"sql": "--select 'blocked' as type,spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status,hostname,program_name,hostprocess,sql_handle from sys.sysprocesses where (blocked != 0 and blocked != spid) union all select 'BLOCKER',spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status, hostname,program_name,hostprocess,sql_handle from sys.sysprocesses  where (spid in (select distinct blocked from sys.sysprocesses where blocked != 0 and blocked != spid) and blocked != spid)"
 					}
 				}
 			]
@@ -281,6 +266,21 @@
 					}
 				}
 			]
-		}
+		},
+                {
+                        "name": "BlockingProcesses",
+                        "description": "SQL Server blocking processes",
+                        "customLog": "MSSQL_BlockingProcesses",
+                        "frequencySecs": 60,
+                        "includeInCustomerAnalytics": true,
+                        "actions": [
+                                {
+                                        "type": "ExecuteSql",
+                                        "parameters": {
+                                                "sql": "select 'blocked' as type,spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status,hostname,program_name,hostprocess,sql_handle from sys.sysprocesses where (blocked != 0 and blocked != spid) union all select 'BLOCKER',spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status, hostname,program_name,hostprocess,sql_handle from sys.sysprocesses  where (spid in (select distinct blocked from sys.sysprocesses where blocked != 0 and blocked != spid) and blocked != spid)"
+                                        }
+                                }
+                        ]
+                }
 	]
 }
