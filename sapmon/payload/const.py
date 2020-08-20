@@ -26,6 +26,7 @@ DEFAULT_QUEUE_TRACE_LEVEL   = logging.DEBUG
 # Config parameters
 CONFIG_SECTION_GLOBAL = "-global-"
 METHODNAME_ACTION     = "_action%s"
+STORAGE_ACCESS_KEY_NAME = "storageAccessKey"
 
 # Naming conventions for generated resources
 KEYVAULT_NAMING_CONVENTION               = "sapmon-kv-%s"

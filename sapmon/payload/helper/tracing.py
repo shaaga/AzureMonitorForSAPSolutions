@@ -139,7 +139,7 @@ class tracing:
                                           ctx.vmInstance["subscriptionId"],
                                           ctx.vmInstance["resourceGroupName"],
                                           queueName = STORAGE_QUEUE_NAMING_CONVENTION % ctx.sapmonId)
-         storageKey = storageQueue.getAccessKey()
+         storageKey = tracing.getAccessKeys(tracer, ctx)
          queueStorageLogHandler = QueueStorageHandler(account_name=storageQueue.accountName,
                                                       account_key = storageKey,
                                                       protocol = "https",
@@ -169,7 +169,7 @@ class tracing:
                                             ctx.vmInstance["subscriptionId"],
                                             ctx.vmInstance["resourceGroupName"],
                                             CUSTOMER_METRICS_QUEUE_NAMING_CONVENTION % ctx.sapmonId)
-           storageKey = storageQueue.getAccessKey()
+           storageKey = tracing.getAccessKeys(tracer, ctx)
            customerMetricsLogHandler = QueueStorageHandler(account_name = storageQueue.accountName,
                                                            account_key = storageKey,
                                                            protocol = "https",
@@ -198,3 +198,24 @@ class tracing:
          j = json.dumps(metrics)
          ctx.analyticsTracer.debug(j)
       return
+
+   # Fetches the storage access keys from keyvault or directly from storage account
+   @staticmethod
+   def getAccessKeys(tracer: logging.Logger, ctx) -> str:
+      try :
+         tracer.info("fetching queue access keys from key vault")
+         kv = AzureKeyVault(tracer,
+                            KEYVAULT_NAMING_CONVENTION % ctx.sapmonId,
+                            ctx.msiClientId)
+         return kv.getSecret(STORAGE_ACCESS_KEY_NAME).value
+      except Exception as e:
+         tracer.warning("unable to get access keys from key vault, fetching from storage account (%s) " % e)
+
+      tracer.info("fetching queue access keys from storage account")
+      storageQueue = AzureStorageQueue(tracer,
+                                       ctx.sapmonId,
+                                       ctx.authToken,
+                                       ctx.vmInstance["subscriptionId"],
+                                       ctx.vmInstance["resourceGroupName"],
+                                       CUSTOMER_METRICS_QUEUE_NAMING_CONVENTION % ctx.sapmonId)
+      return storageQueue.getAccessKey()

@@ -2,7 +2,7 @@
 from azure.common.credentials import BasicTokenAuthentication
 from azure.mgmt.storage import StorageManagementClient
 from azure.identity import ManagedIdentityCredential
-from azure.keyvault.secrets import SecretClient
+from azure.keyvault.secrets import SecretClient, KeyVaultSecret
 
 # Python modules
 import base64
@@ -123,7 +123,7 @@ class AzureKeyVault:
    # Get the current version of a specific secret in the KeyVault
    def getSecret(self,
                  secretId: str,
-                 version: Optional[str] = None) -> bool:
+                 version: Optional[str] = None) -> KeyVaultSecret:
       self.tracer.info("getting KeyVault secret for secretId=%s" % secretId)
       secret = None
       try:
