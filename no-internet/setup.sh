@@ -167,6 +167,7 @@ createPrivateEndpoint PrivateEndpointLAWS azuremonitor /subscriptions/${SUBSCRIP
 
 
 echo "==== Configuring Collector VM ===="
+#TODO donaliu: get file names from tar to install, so there would be no hard dcoded versions
 COMMAND_TO_EXECUTE="wget https://sapmonsto${SAPMON_ID}.blob.core.windows.net/no-internet/no-internet-install-${COLLECTOR_VERSION}.tar && \
 tar -xf no-internet-install-${COLLECTOR_VERSION}.tar && \
 dpkg -i containerd.io_1.2.6-3_amd64.deb && \
