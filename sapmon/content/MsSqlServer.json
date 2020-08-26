@@ -151,28 +151,18 @@
 			]
 		},
 		{
-			"name": "Errorlog",
-			"description": "The Errorlog",
-			"customLog": "MSSQL_Errorlog",
+			"name": "Errors",
+			"description": "Errors from the system health",
+			"customLog": "MSSQL_Error",
 			"frequencySecs": 600,
 			"includeInCustomerAnalytics": true,
 			"actions": [
 				{
 					"type": "ExecuteSql",
 					"parameters": {
-						"sql": "exec xp_readerrorlog 0,1,N'Error:'"
-					}
-				},
-				{
-					"type": "ExecuteSql",
-					"parameters": {
-						"sql": "exec xp_readerrorlog 0,1,N'cachestore flush'"
-					}
-				},
-				{
-					"type": "ExecuteSql",
-					"parameters": {
-						"sql": "exec xp_readerrorlog 0,1,N'A significant part of sql server'"
+						"isTimeSeries": true,
+						"initialTimespanSecs": 86400,
+						"sql": "SELECT CAST(xet.target_data as xml) as XMLDATA INTO #SystemHealthSessionData FROM sys.dm_xe_session_targets xet JOIN sys.dm_xe_sessions xe ON (xe.address = xet.event_session_address) WHERE xe.name = 'system_health';WITH CTE_HealthSession (EventXML) AS (SELECT C.query('.') EventXML FROM #SystemHealthSessionData a CROSS APPLY a.XMLDATA.nodes('/RingBufferTarget/event') as T(C) WHERE C.query('.').value('(/event/@name)[1]', 'varchar(255)') = 'error_reported') SELECT EventXML.value('(/event/@timestamp)[1]', 'datetime') as EventTime, EventXML.value('(/event/data[@name=''error_number'']/value)[1]', 'int') as ErrNum, EventXML.value('(/event/data[@name=''severity'']/value)[1]', 'int') as ErrSeverity, EventXML.value('(/event/data[@name=''state'']/value)[1]', 'int') as ErrState, EventXML.value('(/event/data[@name=''message'']/value)[1]', 'nvarchar(max)') as ErrText, EventXML.value('(/event/action[@name=''database_id'']/value)[1]', 'int') as DBID,EventXML.value('(/event/action[@name=''session_id'']/value)[1]', 'int') as SessionID,EventXML.value('(/event/action[@name=''sql_text'']/value)[1]', 'nvarchar(max)') as SQLText FROM CTE_HealthSession WHERE EventXML.value('(/event/@timestamp)[1]', 'datetime') > {lastRunServerUtc};"
 					}
 				}
 			]
@@ -255,32 +245,34 @@
 		{
 			"name": "BckBackups",
 			"description": "Backups",
-			"customLog": "MSSQL_BckBackups",
+			"customLog": "MSSQL_BckBackups2",
 			"frequencySecs": 60,
 			"includeInCustomerAnalytics": true,
 			"actions": [
 				{
 					"type": "ExecuteSql",
 					"parameters": {
-						"sql": "select t.database_name as DBName,case t.type when N'D' then N'Full' when N'F' then N'File' when N'G' then N'Filegroup' when N'I' then N'Differential' when N'L' then N'Log' end as BackupType, convert(varchar(20),t.backup_finish_date,120) as BackupFinishDate, h.logical_device_name as DeviceName, j.name as MediaSet, t.backup_set_id as BackupSetID, t.name as BackupSet, t.description as Description, convert(decimal(12,2),((t.backup_size/1024)/1024)) as BackupSize, convert(char(8),(t.backup_finish_date - t.backup_start_date),108) as BackupDuration from msdb..backupset t, msdb..backupmediafamily h, msdb..backupmediaset j where t.media_set_id = h.media_set_id and t.media_set_id = j.media_set_id order by t.backup_finish_date desc;"
+						"isTimeSeries": true,
+						"initialTimespanSecs": 86400,
+						"sql": "select t.database_name as DBName,case t.type when N'D' then N'Full' when N'F' then N'File' when N'G' then N'Filegroup' when N'I' then N'Differential' when N'L' then N'Log' end as BackupType, convert(varchar(20),t.backup_finish_date,120) as BackupFinishDate, h.logical_device_name as DeviceName, j.name as MediaSet, t.backup_set_id as BackupSetID, t.name as BackupSet, t.description as Description, convert(decimal(12,2),((t.backup_size/1024)/1024)) as BackupSize, convert(char(8),(t.backup_finish_date - t.backup_start_date),108) as BackupDuration from msdb..backupset t, msdb..backupmediafamily h, msdb..backupmediaset j where t.media_set_id = h.media_set_id and t.media_set_id = j.media_set_id and t.backup_finish_date > {lastRunServerUtc} order by t.backup_finish_date desc;"
 					}
 				}
 			]
 		},
-                {
-                        "name": "BlockingProcesses",
-                        "description": "SQL Server blocking processes",
-                        "customLog": "MSSQL_BlockingProcesses",
-                        "frequencySecs": 60,
-                        "includeInCustomerAnalytics": true,
-                        "actions": [
-                                {
-                                        "type": "ExecuteSql",
-                                        "parameters": {
-                                                "sql": "select 'blocked' as type,spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status,hostname,program_name,hostprocess,sql_handle from sys.sysprocesses where (blocked != 0 and blocked != spid) union all select 'BLOCKER',spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status, hostname,program_name,hostprocess,sql_handle from sys.sysprocesses  where (spid in (select distinct blocked from sys.sysprocesses where blocked != 0 and blocked != spid) and blocked != spid)"
-                                        }
-                                }
-                        ]
-                }
+    {
+      "name": "BlockingProcesses",
+      "description": "SQL Server blocking processes",
+      "customLog": "MSSQL_BlockingProcesses",
+      "frequencySecs": 60,
+      "includeInCustomerAnalytics": true,
+      "actions": [
+	      {
+          "type": "ExecuteSql",
+          "parameters": {
+                  "sql": "select 'blocked' as type,spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status,hostname,program_name,hostprocess,sql_handle from sys.sysprocesses where (blocked != 0 and blocked != spid) union all select 'BLOCKER',spid,kpid,blocked,cmd,waittime,lastwaittype,waitresource,dbid,uid,cpu,physical_io,memusage,login_time,last_batch,ecid,open_tran,status, hostname,program_name,hostprocess,sql_handle from sys.sysprocesses  where (spid in (select distinct blocked from sys.sysprocesses where blocked != 0 and blocked != spid) and blocked != spid)"
+          }
+	      }
+      ]
+    }
 	]
 }
