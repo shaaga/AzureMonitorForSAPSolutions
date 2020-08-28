@@ -14,14 +14,6 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ${SAPMON} | jq
-while true; do
-    read -p "Is this the SapMonitor you want to update? (y/n): " yn
-    case $yn in
-        [Yy]* ) break;;
-        [Nn]* ) exit;;
-        * ) echo "Please answer yes or no.";;
-    esac
-done
 
 SUBSCRIPTION_ID=$(echo ${SAPMON} | jq .id -r | cut -d'/' -f3)
 SAPMON_ID=$(echo ${SAPMON} | jq .managedResourceGroupName -r | cut -d'-' -f3)
@@ -35,11 +27,21 @@ LAWS_SUBSCRIPTION=$(echo ${LAWS_ARM_ID} | cut -d'/' -f3)
 LAWS_RG=$(echo ${LAWS_ARM_ID} | cut -d'/' -f5)
 LAWS_NAME=$(echo ${LAWS_ARM_ID} | cut -d'/' -f9)
 
-# TODO donaliu: maybe the logic should be the other way around, and check for older versions
-if [ ${COLLECTOR_VERSION} != "2.3" ]; then
-    echo "This update will only work on version 2.3"
+UNSUPPORTED_VERSIONS=("" "v1.5" "v1.6" "v2.0-beta" "2.0" "2.1" "2.2")
+
+if [[ " ${UNSUPPORTED_VERSIONS[@]} " =~ " ${COLLECTOR_VERSION} " ]]; then
+    echo "The SapMonitor is of an unsupported version, please recreate the SapMonitor"
     exit 1
 fi
+
+while true; do
+    read -p "Is this the SapMonitor you want to update? (y/n): " yn
+    case $yn in
+        [Yy]* ) break;;
+        [Nn]* ) exit;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
 
 echo "==== Fetching Log-Analytics information ===="
 WORKSPACE_ID=$(az monitor log-analytics workspace show \
