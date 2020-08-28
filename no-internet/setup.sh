@@ -82,7 +82,8 @@ echo "==== Uploading installation files to Storage Account ===="
 az storage container create \
     --account-name sapmonsto${SAPMON_ID} \
     --name no-internet \
-    --public-access blob 2>/dev/null
+    --public-access blob \
+    --output none 2>/dev/null
 az storage blob upload \
     --account-name sapmonsto${SAPMON_ID} \
     --container-name no-internet \
@@ -171,12 +172,9 @@ createPrivateEndpoint PrivateEndpointLAWS azuremonitor /subscriptions/${SUBSCRIP
 
 
 echo "==== Configuring Collector VM ===="
-#TODO donaliu: get file names from tar to install, so there would be no hard coded versions
 COMMAND_TO_EXECUTE="wget https://sapmonsto${SAPMON_ID}.blob.core.windows.net/no-internet/no-internet-install-${COLLECTOR_VERSION}.tar && \
 tar -xf no-internet-install-${COLLECTOR_VERSION}.tar && \
-dpkg -i containerd.io_1.2.6-3_amd64.deb && \
-dpkg -i docker-ce-cli_19.03.9~3-0~ubuntu-xenial_amd64.deb && \
-dpkg -i docker-ce_19.03.9~3-0~ubuntu-xenial_amd64.deb && \
+for file in "'$(tar -tf no-internet-install-'"${COLLECTOR_VERSION}"'.tar | grep .deb)'"; do dpkg -i "'$file'"; done && \
 docker load -i azure-monitor-for-sap-solutions-${COLLECTOR_VERSION}.tar && \
 docker run mcr.microsoft.com/oss/azure/azure-monitor-for-sap-solutions:${COLLECTOR_VERSION} python3 /var/opt/microsoft/sapmon/${COLLECTOR_VERSION}/sapmon/payload/sapmon.py onboard --logAnalyticsWorkspaceId ${WORKSPACE_ID} --logAnalyticsSharedKey ${SHARED_KEY} --enableCustomerAnalytics > /tmp/monitor.log.out && \
 mkdir -p /var/opt/microsoft/sapmon/state && \
