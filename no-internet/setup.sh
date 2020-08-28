@@ -30,6 +30,10 @@ MONITOR_SUBNET=$(echo ${SAPMON} | jq .monitorSubnet -r)
 VNET_RG=$(echo ${MONITOR_SUBNET} | cut -d'/' -f5)
 VNET_NAME=$(echo ${MONITOR_SUBNET} | cut -d'/' -f9)
 SUBNET_NAME=$(echo ${MONITOR_SUBNET} | cut -d'/' -f11)
+LAWS_ARM_ID=$(echo ${SAPMON} | jq .logAnalyticsWorkspaceArmId -r)
+LAWS_SUBSCRIPTION=$(echo ${LAWS_ARM_ID} | cut -d'/' -f3)
+LAWS_RG=$(echo ${LAWS_ARM_ID} | cut -d'/' -f5)
+LAWS_NAME=$(echo ${LAWS_ARM_ID} | cut -d'/' -f9)
 
 # TODO donaliu: maybe the logic should be the other way around, and check for older versions
 if [ ${COLLECTOR_VERSION} != "2.3" ]; then
@@ -37,20 +41,20 @@ if [ ${COLLECTOR_VERSION} != "2.3" ]; then
     exit 1
 fi
 
-# TODO donaliu: need to think about existing LAWS
 echo "==== Fetching Log-Analytics information ===="
 WORKSPACE_ID=$(az monitor log-analytics workspace show \
-    --resource-group sapmon-rg-${SAPMON_ID} \
-    --workspace-name sapmon-log-${SAPMON_ID} \
+    --subscription ${LAWS_SUBSCRIPTION} \
+    --resource-group ${LAWS_RG} \
+    --workspace-name ${LAWS_NAME} \
     --query "customerId" \
     --output tsv)
 SHARED_KEY=$(az monitor log-analytics workspace get-shared-keys \
-    --resource-group sapmon-rg-${SAPMON_ID} \
-    --workspace-name sapmon-log-${SAPMON_ID} \
+    --subscription ${LAWS_SUBSCRIPTION} \
+    --resource-group ${LAWS_RG} \
+    --workspace-name ${LAWS_NAME} \
     --query "primarySharedKey" \
     --output tsv)
 
-# TODO donaliu: will need to think about existing KV
 echo "==== Uploading Storage Account key to KeyVault ===="
 USER_PRINCIPAL_NAME=$(az ad signed-in-user show --query "userPrincipalName" --output tsv)
 STORAGE_KEY=$(az storage account keys list -n sapmonsto${SAPMON_ID} --query [0].value -o tsv)
@@ -159,8 +163,8 @@ az monitor private-link-scope create \
     --resource-group sapmon-rg-${SAPMON_ID} \
     --output none
 az monitor private-link-scope scoped-resource create \
-    --linked-resource /subscriptions/${SUBSCRIPTION_ID}/resourceGroups/sapmon-rg-${SAPMON_ID}/providers/Microsoft.OperationalInsights/workspaces/sapmon-log-${SAPMON_ID} \
-    --name sapmon-log-${SAPMON_ID} \
+    --linked-resource ${LAWS_ARM_ID} \
+    --name ${LAWS_NAME} \
     --resource-group sapmon-rg-${SAPMON_ID} \
     --scope-name PrivateLinkScopeLAWS \
     --output none
