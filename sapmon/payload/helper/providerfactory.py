@@ -11,7 +11,8 @@ availableProviders = {
                         "MsSqlServer": (MSSQLProviderInstance, MSSQLProviderCheck),
                         "PrometheusGeneric": (prometheusProviderInstance, prometheusProviderCheck),
                         "PrometheusHaCluster": (prometheusProviderInstance, prometheusProviderCheck),
-                        "PrometheusNode": (prometheusProviderInstance, prometheusProviderCheck)
+                        "PrometheusNode": (prometheusProviderInstance, prometheusProviderCheck),
+                        "PrometheusOS": (prometheusProviderInstance, prometheusProviderCheck),
                      }
 
 class ProviderFactory(object):
