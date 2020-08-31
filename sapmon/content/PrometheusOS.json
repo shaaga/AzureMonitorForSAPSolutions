@@ -1,0 +1,50 @@
+{
+        "contentType": "Prometheus",
+        "checks": [
+                {
+                        "name": "PrometheusOSExporter_1min",
+                        "description": "Export system data from the prometheus node_exporter every min",
+                        "customLog": "Prometheus_OSExporter",
+                        "frequencySecs": 60,
+                        "actions": [
+                            {
+                                "type": "FetchMetrics",
+                                "parameters": {
+                                    "includePrefixes": "^(node_cpu_seconds)|(node_memory_SwapCached_bytes)|(node_memory_Cached_bytes)|(node_disk_read_time_seconds_total)|(node_disk_write_time_seconds)|(node_network_transmit_packets)|(node_network_receive_packets)|(node_memory_SwapFree_bytes)|(node_memory_SwapTotal_byte)",
+                                    "suppressIfZeroPrefixes": "node_(?:systemd_unit_state)"
+                                }
+                            }
+                        ]
+                },
+                {
+                        "name": "PrometheusOSExporter_15min",
+                        "description": "Export system data from the prometheus node_exporter every 15 mins",
+                        "customLog": "Prometheus_OSExporter",
+                        "frequencySecs": 900,
+                        "actions": [
+                            {
+                                "type": "FetchMetrics",
+                                "parameters": {
+                                    "includePrefixes": "^(node_filesystem_free_bytes)",
+                                    "suppressIfZeroPrefixes": "node_(?:systemd_unit_state)"
+                                }
+                            }
+                        ]
+                },
+                {
+                        "name": "PrometheusOSExporter_24h",
+                        "description": "Export system data from the prometheus node_exporter every day",
+                        "customLog": "Prometheus_OSExporter",
+                        "frequencySecs": 86400,
+                        "actions": [
+                            {
+                                "type": "FetchMetrics",
+                                "parameters": {
+                                    "includePrefixes": "^(node_cooling_device_cur_state)",
+                                    "suppressIfZeroPrefixes": "node_(?:systemd_unit_state)"
+                                }
+                            }
+                        ]
+                }
+        ]
+}
