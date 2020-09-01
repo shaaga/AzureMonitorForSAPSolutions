@@ -176,7 +176,9 @@ createPrivateEndpoint PrivateEndpointLAWS azuremonitor /subscriptions/${SUBSCRIP
 echo "==== Configuring Collector VM ===="
 COMMAND_TO_EXECUTE="wget https://sapmonsto${SAPMON_ID}.blob.core.windows.net/no-internet/no-internet-install-${COLLECTOR_VERSION}.tar && \
 tar -xf no-internet-install-${COLLECTOR_VERSION}.tar && \
-for file in "'$(tar -tf no-internet-install-'"${COLLECTOR_VERSION}"'.tar | grep .deb)'"; do dpkg -i "'$file'"; done && \
+dpkg -i "'$(tar -tf no-internet-install-'"${COLLECTOR_VERSION}"'.tar | grep containerd.io_)'" && \
+dpkg -i "'$(tar -tf no-internet-install-'"${COLLECTOR_VERSION}"'.tar | grep docker-ce-cli_)'" && \
+dpkg -i "'$(tar -tf no-internet-install-'"${COLLECTOR_VERSION}"'.tar | grep docker-ce_)'" && \
 docker load -i azure-monitor-for-sap-solutions-${COLLECTOR_VERSION}.tar && \
 docker run mcr.microsoft.com/oss/azure/azure-monitor-for-sap-solutions:${COLLECTOR_VERSION} python3 /var/opt/microsoft/sapmon/${COLLECTOR_VERSION}/sapmon/payload/sapmon.py onboard --logAnalyticsWorkspaceId ${WORKSPACE_ID} --logAnalyticsSharedKey ${SHARED_KEY} --enableCustomerAnalytics > /tmp/monitor.log.out && \
 mkdir -p /var/opt/microsoft/sapmon/state && \
