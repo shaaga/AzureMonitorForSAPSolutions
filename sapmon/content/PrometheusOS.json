@@ -10,7 +10,7 @@
                             {
                                 "type": "FetchMetrics",
                                 "parameters": {
-                                    "includePrefixes": "^(node_cpu_seconds)|(node_memory_SwapCached_bytes)|(node_memory_Cached_bytes)|(node_disk_read_time_seconds_total)|(node_disk_write_time_seconds)|(node_network_transmit_packets)|(node_network_receive_packets)|(node_memory_SwapFree_bytes)|(node_memory_SwapTotal_byte)",
+                                    "includePrefixes": "^(node_cpu_seconds)|(node_memory_MemTotal_bytes)|(node_memory_MemAvailable_bytes)|(node_memory_SwapCached_bytes)|(node_memory_Cached_bytes)|(node_disk_read_time_seconds_total)|(node_disk_write_time_seconds)|(node_network_transmit_packets)|(node_network_receive_packets)|(node_memory_SwapFree_bytes)|(node_memory_SwapTotal_byte)",
                                     "suppressIfZeroPrefixes": "node_(?:systemd_unit_state)"
                                 }
                             }
@@ -25,7 +25,7 @@
                             {
                                 "type": "FetchMetrics",
                                 "parameters": {
-                                    "includePrefixes": "^(node_filesystem_free_bytes)",
+                                    "includePrefixes": "^(node_filesystem_free_bytes)|(node_filesystem_size_bytes)|(node_filesystem_avail_bytes)",
                                     "suppressIfZeroPrefixes": "node_(?:systemd_unit_state)"
                                 }
                             }
