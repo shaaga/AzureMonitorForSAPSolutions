@@ -206,7 +206,7 @@ class prometheusProviderCheck(ProviderCheck):
         except Exception as e:
             self.tracer.error("[%s] could not format logItem=%s into JSON (%s)" % (self.fullName,
                                                                                    resultSet[:50],
-                                                                                   e))
+        self.tracer.info("Persia testing",resultJsonString)                                                                           e))
         return resultJsonString
 
     # Update the internal state of this check (including last run times)
