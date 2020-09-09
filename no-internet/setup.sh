@@ -78,7 +78,7 @@ az keyvault delete-policy \
     --output none
 
 echo "==== Downloading installation files ===="
-wget https://github.com/Azure/AzureMonitorForSAPSolutions/releases/download/${COLLECTOR_VERSION}/no-internet-install-${COLLECTOR_VERSION}.tar
+wget -O no-internet-install-${COLLECTOR_VERSION}.tar https://github.com/Azure/AzureMonitorForSAPSolutions/releases/download/${COLLECTOR_VERSION}/no-internet-install-${COLLECTOR_VERSION}.tar
 
 echo "==== Uploading installation files to Storage Account ===="
 az storage container create \
@@ -101,7 +101,6 @@ az storage account update \
     --access-tier=Hot \
     --output none
 
-# TODO donaliu: need to check what is the minimum permissions to perform this action
 echo "==== Disable private endpoint policies on NSG ===="
 az network vnet subnet update \
     --name ${SUBNET_NAME} \
@@ -118,10 +117,7 @@ createPrivateEndpoint() {
     private_dns_zone_name=$4
 
     echo "==== Creating Private Endpoint ${endpoint_name} ===="
-    echo "NOTE: There may be deployment failures of the resource already exists and that is normal"
-
     zone_name=$(echo $private_dns_zone_name | sed 's/\./-/g')
-
     az network private-endpoint create \
         --name ${endpoint_name} \
         --resource-group sapmon-rg-${SAPMON_ID} \
@@ -132,19 +128,42 @@ createPrivateEndpoint() {
         --output none
 
     echo "==== Creating Private DNS Zone ${private_dns_zone_name} ===="
-    az network private-dns zone create \
+    set +e
+    az network private-dns zone show \
         --resource-group ${VNET_RG} \
         --name ${private_dns_zone_name} \
-        --output none
+        --output none 2>/dev/null
+    status=$?
+    set -e
+    if [ $status -ne 0 ]; then
+        az network private-dns zone create \
+          --resource-group ${VNET_RG} \
+          --name ${private_dns_zone_name} \
+          --output none
+    else
+        echo "Private DNS zone already exists, skip creation"
+    fi
 
     echo "==== Linking Private DNS with VNet ===="
-    az network private-dns link vnet create \
+    set +e
+    az network private-dns link vnet show \
         --resource-group ${VNET_RG} \
         --zone-name ${private_dns_zone_name} \
         --name ${type}-${SAPMON_ID} \
-        --virtual-network ${VNET_NAME} \
-        --registration-enabled false \
-        --output none
+        --output none 2>/dev/null
+    status=$?
+    set -e
+    if [ $status -ne 0 ]; then
+        az network private-dns link vnet create \
+          --resource-group ${VNET_RG} \
+          --zone-name ${private_dns_zone_name} \
+          --name ${type}-${SAPMON_ID} \
+          --virtual-network ${VNET_NAME} \
+          --registration-enabled false \
+          --output none
+    else
+        echo "Private DNS already linked with VNet, skip linking"
+    fi
 
     echo "==== Creating Private DNS entry for the Private Endpoint ===="
     az network private-endpoint dns-zone-group create \
