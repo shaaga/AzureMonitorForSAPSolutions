@@ -40,7 +40,7 @@
                             {
                                 "type": "FetchMetrics",
                                 "parameters": {
-                                    "includePrefixes": "^(node_cooling_device_cur_state)",
+                                    "includePrefixes": "^(node_cooling_device_cur_state)|(node_uname_info)",
                                     "suppressIfZeroPrefixes": "node_(?:systemd_unit_state)"
                                 }
                             }
