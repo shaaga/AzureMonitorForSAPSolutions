@@ -6,6 +6,7 @@ az extension add -n log-analytics 2>/dev/null
 
 SAPMON_RG=$1
 SAPMON_NAME=$2
+VERSION_TO_UPDATE=$3
 
 SAPMON=$(az sapmonitor show -g ${SAPMON_RG} -n ${SAPMON_NAME})
 if [ $? -ne 0 ]; then
@@ -42,6 +43,19 @@ while true; do
         * ) echo "Please answer yes or no.";;
     esac
 done
+
+# Version to update is set
+if [[ ! -z "$VERSION_TO_UPDATE" ]]; then
+    while true; do
+        read -p "This will also update your SapMonitor version from ${COLLECTOR_VERSION} to ${VERSION_TO_UPDATE}, is that OK? (y/n): " yn
+        case $yn in
+            [Yy]* ) break;;
+            [Nn]* ) exit;;
+            * ) echo "Please answer yes or no.";;
+        esac
+    done
+    COLLECTOR_VERSION=${VERSION_TO_UPDATE}
+fi
 
 echo "==== Fetching Log-Analytics information ===="
 WORKSPACE_ID=$(az monitor log-analytics workspace show \
@@ -80,6 +94,16 @@ az keyvault delete-policy \
 echo "==== Downloading installation files ===="
 wget -O no-internet-install-${COLLECTOR_VERSION}.tar https://github.com/Azure/AzureMonitorForSAPSolutions/releases/download/${COLLECTOR_VERSION}/no-internet-install-${COLLECTOR_VERSION}.tar
 
+echo "==== Delete private endpoint if exists ===="
+az network private-endpoint delete \
+    --name PrivateEndpointStorageBlob \
+    --resource-group sapmon-rg-${SAPMON_ID} \
+    --output none
+az network private-endpoint delete \
+    --name PrivateEndpointStorageQueue \
+    --resource-group sapmon-rg-${SAPMON_ID} \
+    --output none
+
 echo "==== Uploading installation files to Storage Account ===="
 az storage container create \
     --account-name sapmonsto${SAPMON_ID} \
@@ -93,7 +117,7 @@ az storage blob upload \
     --file no-internet-install-${COLLECTOR_VERSION}.tar \
     --output none 2>/dev/null
 
-echo "==== Upgrading Storage Acocunt from v1 to v2 ===="
+echo "==== Upgrading Storage Account from v1 to v2 ===="
 az storage account update \
     -g sapmon-rg-${SAPMON_ID} \
     -n sapmonsto${SAPMON_ID} \
@@ -199,6 +223,7 @@ dpkg -i "'$(tar -tf no-internet-install-'"${COLLECTOR_VERSION}"'.tar | grep cont
 dpkg -i "'$(tar -tf no-internet-install-'"${COLLECTOR_VERSION}"'.tar | grep docker-ce-cli_)'" && \
 dpkg -i "'$(tar -tf no-internet-install-'"${COLLECTOR_VERSION}"'.tar | grep docker-ce_)'" && \
 docker load -i azure-monitor-for-sap-solutions-${COLLECTOR_VERSION}.tar && \
+docker rm -f "'$(docker ps -aq)'" 2>/dev/null || true && \
 docker run mcr.microsoft.com/oss/azure/azure-monitor-for-sap-solutions:${COLLECTOR_VERSION} python3 /var/opt/microsoft/sapmon/${COLLECTOR_VERSION}/sapmon/payload/sapmon.py onboard --logAnalyticsWorkspaceId ${WORKSPACE_ID} --logAnalyticsSharedKey ${SHARED_KEY} --enableCustomerAnalytics > /tmp/monitor.log.out && \
 mkdir -p /var/opt/microsoft/sapmon/state && \
 docker run --name sapmon-ver-${COLLECTOR_VERSION} --detach --restart always --network host --volume /var/opt/microsoft/sapmon/state:/var/opt/microsoft/sapmon/${COLLECTOR_VERSION}/sapmon/state --env Version=${COLLECTOR_VERSION} mcr.microsoft.com/oss/azure/azure-monitor-for-sap-solutions:${COLLECTOR_VERSION} sh /var/opt/microsoft/sapmon/${COLLECTOR_VERSION}/monitorapp.sh ${COLLECTOR_VERSION}"
