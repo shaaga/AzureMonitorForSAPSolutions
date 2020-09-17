@@ -196,39 +196,32 @@ class MSSQLProviderCheck(ProviderCheck):
                    initialTimespanSecs: int) -> str:
       self.tracer.info("[%s] preparing SQL statement" % self.fullName)
 
-      # Insert logic to get server UTC time (_SERVER_UTC)
-      sqlTimestamp = ", GETDATE() AS %s, GETUTCDATE() AS %s, GETUTCDATE() AS %s FROM" % (COL_LOCAL_UTC,COL_SERVER_UTC,COL_TIMESERIES_UTC)
-      self.tracer.debug("[%s] sqlTimestamp=%s" % (self.fullName,
-                                                  sqlTimestamp))
-      preparedSql = sql.replace(" FROM", sqlTimestamp)
-      
       # If time series, insert time condition
-      if isTimeSeries:
-         lastRunServer = self.state.get("lastRunServer", None)
+      lastRunServer = self.state.get("lastRunServer", None)
 
-         # TODO(tniek) - make WHERE conditions for time series queries more flexible
-         if not lastRunServer:
-            self.tracer.info("[%s] time series query has never been run, applying initalTimespanSecs=%d" % (self.fullName, initialTimespanSecs))
-            lastRunServerUtc = "DATEADD(s,-%d, GETUTCDATE())" % initialTimespanSecs
-         else:
-            if not isinstance(lastRunServer, datetime):
-               self.tracer.error("[%s] lastRunServer=%s could not been de-serialized into datetime object" % (self.fullName,
+      # TODO(tniek) - make WHERE conditions for time series queries more flexible
+      if not lastRunServer:
+         self.tracer.info("[%s] time series query has never been run, applying initalTimespanSecs=%d" % (self.fullName, initialTimespanSecs))
+         lastRunServerUtc = "DATEADD(s,-%d, GETUTCDATE())" % initialTimespanSecs
+      else:
+         if not isinstance(lastRunServer, datetime):
+            self.tracer.error("[%s] lastRunServer=%s could not been de-serialized into datetime object" % (self.fullName,
                                                                                                               str(lastRunServer)))
-               return None
-            try:
-               lastRunServerUtc = "'%s'" % lastRunServer.strftime(TIME_FORMAT_SQL)
-            except Exception as e:
-               self.tracer.error("[%s] could not format lastRunServer=%s into SQL format (%s)" % (self.fullName,
-                                                                                                  str(lastRunServer),
-                                                                                                   e))
-               return None
-            self.tracer.info("[%s] time series query has been run at %s, filter out only new records since then" % \
-               (self.fullName, lastRunServerUtc))
-         self.tracer.debug("[%s] lastRunServerUtc=%s" % (self.fullName,
+            return None
+         try:
+            lastRunServerUtc = "'%s'" % lastRunServer.strftime(TIME_FORMAT_SQL)
+         except Exception as e:
+            self.tracer.error("[%s] could not format lastRunServer=%s into SQL format (%s)" % (self.fullName,
+                                                                                               str(lastRunServer),
+                                                                                               e))
+            return None
+         self.tracer.info("[%s] time series query has been run at %s, filter out only new records since then" % \
+            (self.fullName, lastRunServerUtc))
+      self.tracer.debug("[%s] lastRunServerUtc=%s" % (self.fullName,
                                                          lastRunServerUtc))
-         preparedSql = sql.replace("{lastRunServerUtc}", lastRunServerUtc, 1)
-         self.tracer.debug("[%s] preparedSql=%s" % (self.fullName,
-                                                    preparedSql))
+      preparedSql = sql.replace("{lastRunServerUtc}", lastRunServerUtc, 1)
+      self.tracer.debug("[%s] preparedSql=%s" % (self.fullName,
+                                                 preparedSql))
 
       # Return the finished SQL statement
       return preparedSql
@@ -241,7 +234,10 @@ class MSSQLProviderCheck(ProviderCheck):
 
       def handle_sql_variant_as_string(value):
          return value.decode('utf-16le')
-
+      
+      # Marking which column will be used for TimeGenerated
+      self.colTimeGenerated = COL_TIMESERIES_UTC if isTimeSeries else COL_SERVER_UTC
+      
       self.tracer.info("[%s] connecting to sql and executing SQL" % self.fullName)
 
       # Find and connect to sql server
@@ -290,13 +286,20 @@ class MSSQLProviderCheck(ProviderCheck):
 
       self.tracer.info("[%s] successfully ran SQL for check" % self.fullName)
 
-# Update the internal state of this check (including last run times)
+   # Update the internal state of this check (including last run times)
    def updateState(self) -> bool:
       self.tracer.info("[%s] updating internal state" % self.fullName)
+      (colIndex, resultRows) = self.lastResult
 
-      # Always store lastRunLocal; 
       lastRunLocal = datetime.utcnow()
       self.state["lastRunLocal"] = lastRunLocal
+
+      # Only store lastRunServer if we have it in the check result; consider time-series queries
+      if len(resultRows) > 0:
+         if COL_TIMESERIES_UTC in colIndex:
+            self.state["lastRunServer"] = resultRows[-1][colIndex[COL_TIMESERIES_UTC]]
+         elif COL_SERVER_UTC in colIndex:
+            self.state["lastRunServer"] = resultRows[0][colIndex[COL_SERVER_UTC]]
+
       self.tracer.info("[%s] internal state successfully updated" % self.fullName)
       return True
-
