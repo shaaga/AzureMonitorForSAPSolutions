@@ -202,14 +202,14 @@ class MSSQLProviderCheck(ProviderCheck):
       # TODO(tniek) - make WHERE conditions for time series queries more flexible
       if not lastRunServer:
          self.tracer.info("[%s] time series query has never been run, applying initalTimespanSecs=%d" % (self.fullName, initialTimespanSecs))
-         lastRunServerUtc = "DATEADD(s,-%d, GETUTCDATE())" % initialTimespanSecs
+         lastRunServerUtc = "CONVERT(DATETIME2,DATEADD(s,-%d, GETUTCDATE()))" % initialTimespanSecs
       else:
          if not isinstance(lastRunServer, datetime):
             self.tracer.error("[%s] lastRunServer=%s could not been de-serialized into datetime object" % (self.fullName,
                                                                                                               str(lastRunServer)))
             return None
          try:
-            lastRunServerUtc = "'%s'" % lastRunServer.strftime(TIME_FORMAT_SQL)
+            lastRunServerUtc = "CONVERT(DATETIME2,N'%s')" % lastRunServer.strftime(TIME_FORMAT_SQL)
          except Exception as e:
             self.tracer.error("[%s] could not format lastRunServer=%s into SQL format (%s)" % (self.fullName,
                                                                                                str(lastRunServer),
