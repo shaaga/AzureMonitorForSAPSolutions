@@ -66,25 +66,25 @@ SHARED_KEY=$(az monitor log-analytics workspace get-shared-keys \
     --query "primarySharedKey" \
     --output tsv)
 
-#echo "==== Uploading Storage Account key to KeyVault ===="
-#USER_PRINCIPAL_NAME=$(az ad signed-in-user show --query "userPrincipalName" --output tsv)
-#STORAGE_KEY=$(az storage account keys list -n sapmonsto${SAPMON_ID} --query [0].value -o tsv)
-#az keyvault set-policy \
-#    --name sapmon-kv-${SAPMON_ID} \
-#    --resource-group sapmon-rg-${SAPMON_ID} \
-#    --upn ${USER_PRINCIPAL_NAME} \
-#    --secret-permissions set \
-#    --output none
-#az keyvault secret set \
-#    --vault-name sapmon-kv-${SAPMON_ID} \
-#    --name storageAccessKey \
-#    --value ${STORAGE_KEY} \
-#    --output none
-#az keyvault delete-policy \
-#    --name sapmon-kv-${SAPMON_ID} \
-#    --resource-group sapmon-rg-${SAPMON_ID} \
-#    --upn ${USER_PRINCIPAL_NAME} \
-#    --output none
+echo "==== Uploading Storage Account key to KeyVault ===="
+USER_PRINCIPAL_NAME=$(az ad signed-in-user show --query "userPrincipalName" --output tsv)
+STORAGE_KEY=$(az storage account keys list -n sapmonsto${SAPMON_ID} --query [0].value -o tsv)
+az keyvault set-policy \
+    --name sapmon-kv-${SAPMON_ID} \
+    --resource-group sapmon-rg-${SAPMON_ID} \
+    --upn ${USER_PRINCIPAL_NAME} \
+    --secret-permissions set \
+    --output none
+az keyvault secret set \
+    --vault-name sapmon-kv-${SAPMON_ID} \
+    --name storageAccessKey \
+    --value ${STORAGE_KEY} \
+    --output none
+az keyvault delete-policy \
+    --name sapmon-kv-${SAPMON_ID} \
+    --resource-group sapmon-rg-${SAPMON_ID} \
+    --upn ${USER_PRINCIPAL_NAME} \
+    --output none
 
 echo "==== Downloading installation files ===="
 wget -O no-internet-install-${COLLECTOR_VERSION}.tar https://github.com/Azure/AzureMonitorForSAPSolutions/releases/download/${COLLECTOR_VERSION}/no-internet-install-${COLLECTOR_VERSION}.tar
@@ -93,14 +93,14 @@ echo "==== Uploading installation files to Storage Account ===="
 az storage container create \
     --account-name sapmonsto${SAPMON_ID} \
     --name no-internet \
-    --public-access blob #\
-    #--output none 2>/dev/null
+    --public-access blob \
+    --output none 2>/dev/null
 az storage blob upload \
     --account-name sapmonsto${SAPMON_ID} \
     --container-name no-internet \
     --name no-internet-install-${COLLECTOR_VERSION}.tar \
-    --file no-internet-install-${COLLECTOR_VERSION}.tar #\
-    #--output none 2>/dev/null
+    --file no-internet-install-${COLLECTOR_VERSION}.tar \
+    --output none 2>/dev/null
 
 echo "==== Configuring Collector VM ===="
 COMMAND_TO_EXECUTE="wget https://sapmonsto${SAPMON_ID}.blob.core.windows.net/no-internet/no-internet-install-${COLLECTOR_VERSION}.tar && \
